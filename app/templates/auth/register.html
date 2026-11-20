@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Create Account — CashOn{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v=1" />{% endblock %}
+{% block content %}
+<section class="au">
+  <div class="au-art">
+    <div>
+      <h1 class="au-title">Save what you love. Track what's on its way.</h1>
+      <p class="au-lede">One free account keeps your favourites, your orders and your best deals in one place.</p>
+    </div>
+    {% include "auth/_au_board.html" %}
+    <ul class="au-perks">
+      <li><i class="bi bi-heart"></i> Personal wishlist</li>
+      <li><i class="bi bi-truck"></i> Easy order tracking</li>
+      <li><i class="bi bi-tag"></i> Member offers</li>
+    </ul>
+  </div>
+
+  <div class="au-panel">
+    <div class="au-form">
+      <h2 class="au-h">Create your account</h2>
+      <p class="au-sub">It takes under a minute.</p>
+
+      <form method="POST" action="{{ url_for('auth.register') }}" novalidate>
+        <div class="au-field{% if errors.get('name') %} is-bad{% endif %}">
+          <label for="name">Full name</label>
+          <input class="au-input" type="text" id="name" name="name" value="{{ form_data.get('name','') }}" placeholder="Your full name" autocomplete="name" required autofocus>
+          {% if errors.get('name') %}<p class="au-field-error" role="alert">{{ errors.name }}</p>{% endif %}
+        </div>
+
+        <div class="au-field{% if errors.get('email') %} is-bad{% endif %}">
+          <label for="email">Email address</label>
+          <input class="au-input" type="email" id="email" name="email" value="{{ form_data.get('email','') }}" placeholder="you@example.com" autocomplete="email" required>
+          {% if errors.get('email') %}<p class="au-field-error" role="alert">{{ errors.email }}</p>{% endif %}
+        </div>
+
+        <div class="au-field{% if errors.get('password') %} is-bad{% endif %}">
+          <label for="password">Password <small>(at least 6 characters)</small></label>
+          <div class="au-pw">
+            <input class="au-input" type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" required oninput="checkStrength(this.value)">
+            <button type="button" class="au-toggle" id="toggle-pw" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
+          {% if errors.get('password') %}<p class="au-field-error" role="alert">{{ errors.password }}</p>{% endif %}
+          <div id="strength-bar-wrap" class="au-meter" style="display:none">
+            <div class="au-meter-track"><div id="strength-bar"></div></div>
+            <p id="strength-label"></p>
+          </div>
+        </div>
+
+        <div class="au-field{% if errors.get('confirm') %} is-bad{% endif %}">
+          <label for="confirm">Confirm password</label>
+          <div class="au-pw">
+            <input class="au-input" type="password" id="confirm" name="confirm" placeholder="Enter your password again" autocomplete="new-password" required>
+            <button type="button" class="au-toggle" id="toggle-confirm" aria-label="Show confirm password" aria-pressed="false">Show</button>
+          </div>
+          {% if errors.get('confirm') %}<p class="au-field-error" role="alert">{{ errors.confirm }}</p>{% endif %}
+          <p class="au-note" id="match-note" role="status" aria-live="polite"></p>
+        </div>
+
+        <button class="au-submit" type="submit">Create account <i class="bi bi-arrow-right"></i></button>
+      </form>
+
+      <p class="au-foot">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+      <p class="au-secure"><i class="bi bi-lock"></i> Your details stay private and secure.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+function makeToggle(btnId, inputId) {
+  const btn = document.getElementById(btnId);
+  const input = document.getElementById(inputId);
+  btn?.addEventListener("click", () => {
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    btn.textContent = show ? "Hide" : "Show";
+    btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+    btn.setAttribute("aria-pressed", show ? "true" : "false");
+  });
+}
+makeToggle("toggle-pw", "password");
+makeToggle("toggle-confirm", "confirm");
+
+function checkStrength(value) {
+  const bar = document.getElementById("strength-bar");
+  const label = document.getElementById("strength-label");
+  const wrap = document.getElementById("strength-bar-wrap");
+  if (!bar || !label || !wrap) return;
+  wrap.style.display = value.length ? "block" : "none";
+  let score = 0;
+  if (value.length >= 6) score++;
+  if (value.length >= 10) score++;
+  if (/[A-Z]/.test(value)) score++;
+  if (/[0-9]/.test(value)) score++;
+  if (/[^A-Za-z0-9]/.test(value)) score++;
+  const levels = [
+    {pct:"20%",color:"#c45b4a",text:"Too weak"},
+    {pct:"40%",color:"#d98545",text:"Weak"},
+    {pct:"60%",color:"#c49a42",text:"Fair"},
+    {pct:"80%",color:"#4e8a67",text:"Good"},
+    {pct:"100%",color:"#2e704b",text:"Strong"}
+  ];
+  const level = levels[Math.min(score, 4)];
+  bar.style.width = level.pct;
+  bar.style.background = level.color;
+  label.textContent = level.text;
+  label.style.color = level.color;
+  checkMatch();
+}
+
+// Live "passwords match" hint
+function checkMatch() {
+  const pw = document.getElementById("password");
+  const cf = document.getElementById("confirm");
+  const note = document.getElementById("match-note");
+  if (!pw || !cf || !note) return;
+  if (!cf.value) { note.textContent = ""; note.className = "au-note"; return; }
+  const ok = pw.value === cf.value;
+  note.textContent = ok ? "Passwords match." : "Passwords don't match yet.";
+  note.className = "au-note " + (ok ? "is-good" : "is-bad");
+}
+document.getElementById("confirm")?.addEventListener("input", checkMatch);
+</script>
+{% endblock %}

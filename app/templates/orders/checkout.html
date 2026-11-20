@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Checkout — CASHON{% endblock %}
+
+{% block content %}
+<div style="padding-top:calc(var(--nav-h) + 36px + var(--sp-8));padding-bottom:var(--sp-20)">
+<div class="container container--narrow">
+
+  <div class="breadcrumb">
+    <a href="{{ url_for('shop.index') }}">Home</a>
+    <span class="breadcrumb-sep">›</span>
+    <a href="{{ url_for('shop.cart') }}">Cart</a>
+    <span class="breadcrumb-sep">›</span>
+    <span>Checkout</span>
+  </div>
+
+  <h1 style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:900;color:var(--c-text-1);margin:var(--sp-4) 0 var(--sp-8)">
+    Secure Checkout
+  </h1>
+
+  <form method="POST" action="{{ url_for('orders.checkout') }}?coupon={{ coupon_code }}" id="checkout-form">
+    <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:var(--sp-8);align-items:start">
+
+      {# ── LEFT: delivery + payment ── #}
+      <div style="display:flex;flex-direction:column;gap:var(--sp-6)">
+
+        {# Delivery address #}
+        <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:var(--sp-6)">
+          <h2 style="font-size:var(--text-lg);font-weight:800;color:var(--c-text-1);margin-bottom:var(--sp-5)">
+            <i class="bi bi-geo-alt-fill" style="color:var(--c-primary)"></i> Delivery Address
+          </h2>
+
+          {% if addresses %}
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-5)">
+            {% for addr in addresses %}
+            <label style="
+              display:flex;gap:var(--sp-3);padding:var(--sp-4);
+              border-radius:var(--r-lg);border:1.5px solid var(--c-border);
+              cursor:pointer;transition:border-color var(--dur-fast);
+            " onmouseover="this.style.borderColor='var(--c-primary)'"
+               onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--c-border)'">
+              <input type="radio" name="address_id" value="{{ addr.id }}"
+                     {% if loop.first %}checked{% endif %}
+                     style="margin-top:3px;accent-color:var(--c-primary);flex-shrink:0" />
+              <div>
+                <p style="font-weight:700;color:var(--c-text-1);margin:0">{{ addr.full_name }} · {{ addr.phone }}</p>
+                <p style="font-size:var(--text-sm);color:var(--c-text-2);margin:4px 0 0">
+                  {{ addr.line1 }}{% if addr.line2 %}, {{ addr.line2 }}{% endif %},
+                  {{ addr.city }}, {{ addr.state }} — {{ addr.pincode }}
+                </p>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+
+          <details style="margin-top:var(--sp-3)">
+            <summary style="font-size:var(--text-sm);font-weight:700;color:var(--c-primary);cursor:pointer;list-style:none">
+              + Add a new address
+            </summary>
+            <div style="margin-top:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+              {{ _new_addr_fields() }}
+            </div>
+          </details>
+
+          {% else %}
+          {# No saved address — show form inline #}
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3)">
+            {{ _new_addr_fields() }}
+          </div>
+          {% endif %}
+        </div>
+
+        {# Payment method #}
+        <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:var(--sp-6)">
+          <h2 style="font-size:var(--text-lg);font-weight:800;color:var(--c-text-1);margin-bottom:var(--sp-5)">
+            <i class="bi bi-credit-card-fill" style="color:var(--c-primary)"></i> Payment Method
+          </h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)">
+            {% for val, icon, label in [
+              ('card','bi-credit-card','Credit / Debit Card'),
+              ('upi','bi-phone','UPI'),
+              ('netbanking','bi-bank','Net Banking'),
+              ('cod','bi-cash-stack','Cash on Delivery'),
+            ] %}
+            <label style="
+              display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4);
+              border-radius:var(--r-lg);border:1.5px solid var(--c-border);
+              cursor:pointer;transition:all var(--dur-fast);
+            " onmouseover="this.style.borderColor='var(--c-primary)'"
+               onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--c-border)'">
+              <input type="radio" name="payment_method" value="{{ val }}"
+                     {% if val == 'card' %}checked{% endif %}
+                     style="accent-color:var(--c-primary)" />
+              <i class="bi {{ icon }}" style="font-size:1.1rem;color:var(--c-primary)"></i>
+              <span style="font-size:var(--text-sm);font-weight:600;color:var(--c-text-2)">{{ label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          <p style="font-size:var(--text-xs);color:var(--c-text-3);margin-top:var(--sp-4);display:flex;align-items:center;gap:var(--sp-2)">
+            <i class="bi bi-lock-fill" style="color:var(--c-success)"></i>
+            This is a simulated payment environment. No real charges will be made.
+          </p>
+        </div>
+
+        {# Coupon #}
+        <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:var(--sp-6)">
+          <h2 style="font-size:var(--text-lg);font-weight:800;color:var(--c-text-1);margin-bottom:var(--sp-4)">
+            <i class="bi bi-tag-fill" style="color:var(--c-gold)"></i> Coupon Code
+          </h2>
+          {% if coupon_data and coupon_discount > 0 %}
+          <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:var(--r-lg);padding:var(--sp-4);display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span style="font-weight:800;color:var(--c-success)">{{ coupon_code }}</span>
+              <span style="font-size:var(--text-sm);color:var(--c-text-2);margin-left:var(--sp-3)">{{ coupon_data.description }}</span>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:800;color:var(--c-success)">−₹{{ '{:,.0f}'.format(coupon_discount) }}</div>
+              <a href="{{ url_for('orders.checkout') }}" style="font-size:var(--text-xs);color:var(--c-error)">Remove</a>
+            </div>
+          </div>
+          {% else %}
+          <div style="display:flex;gap:var(--sp-3)">
+            <input type="text" id="coupon-input" placeholder="Enter coupon code"
+                   class="form-input" style="text-transform:uppercase;letter-spacing:.05em" />
+            <button type="button" onclick="applyCoupon()" class="btn btn--secondary" style="flex-shrink:0">Apply</button>
+          </div>
+          <div id="coupon-msg" style="font-size:var(--text-xs);margin-top:var(--sp-2);display:none"></div>
+          <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-top:var(--sp-3)">
+            {% for c in [('SAVE10','10% off'),('WELCOME200','₹200 off'),('FESTIVE500','₹500 off')] %}
+            <span data-copy="{{ c[0] }}"
+                  onclick="document.getElementById('coupon-input').value='{{ c[0] }}'"
+                  class="tag" style="cursor:pointer">{{ c[0] }}: {{ c[1] }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ── RIGHT: order summary ── #}
+      <div style="
+        background:var(--c-surface);border:1px solid var(--c-border);
+        border-radius:var(--r-xl);padding:var(--sp-6);
+        position:sticky;top:calc(var(--nav-h) + 56px);
+      ">
+        <h2 style="font-size:var(--text-lg);font-weight:800;color:var(--c-text-1);margin-bottom:var(--sp-5)">
+          Order Summary
+        </h2>
+
+        <div style="display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-5)">
+          {% for item in cart_items %}
+          <div style="display:flex;gap:var(--sp-3);align-items:flex-start">
+            <img src="{{ item.image }}" alt="{{ item.name }}"
+                 style="width:56px;height:56px;object-fit:cover;border-radius:var(--r-md);flex-shrink:0;border:1px solid var(--c-border)" />
+            <div style="flex:1;min-width:0">
+              <p style="font-size:var(--text-sm);font-weight:600;color:var(--c-text-1);margin:0;line-height:1.3;
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ item.name }}</p>
+              <p style="font-size:var(--text-xs);color:var(--c-text-3);margin:4px 0 0">Qty: {{ item.qty }}</p>
+            </div>
+            <span style="font-size:var(--text-sm);font-weight:700;color:var(--c-text-1);flex-shrink:0">
+              ₹{{ '{:,.0f}'.format(item.unit_price * item.qty) }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div style="border-top:1px solid var(--c-border);padding-top:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+          {% for label, amount, style in [
+            ('Subtotal', subtotal, ''),
+            ('Shipping', shipping_fee, '' if shipping_fee else 'color:var(--c-success)'),
+          ] %}
+          <div style="display:flex;justify-content:space-between;font-size:var(--text-sm)">
+            <span style="color:var(--c-text-2)">{{ label }}</span>
+            <span style="color:var(--c-text-1);font-weight:600;{{ style }}">
+              {% if label == 'Shipping' and shipping_fee == 0 %}FREE{% else %}₹{{ '{:,.0f}'.format(amount) }}{% endif %}
+            </span>
+          </div>
+          {% endfor %}
+
+          {% if coupon_discount > 0 %}
+          <div style="display:flex;justify-content:space-between;font-size:var(--text-sm)">
+            <span style="color:var(--c-success)">Coupon ({{ coupon_code }})</span>
+            <span style="color:var(--c-success);font-weight:700">−₹{{ '{:,.0f}'.format(coupon_discount) }}</span>
+          </div>
+          {% endif %}
+
+          <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--c-text-3)">
+            <span>Taxes (GST included)</span>
+            <span>₹{{ '{:,.0f}'.format(tax) }}</span>
+          </div>
+
+          <div style="
+            border-top:1px solid var(--c-border);padding-top:var(--sp-4);
+            display:flex;justify-content:space-between;align-items:center;
+          ">
+            <span style="font-weight:800;font-size:var(--text-md);color:var(--c-text-1)">Total</span>
+            <span style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:900;color:var(--c-text-1)">
+              ₹{{ '{:,.0f}'.format(total) }}
+            </span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--full btn--lg" style="margin-top:var(--sp-5)" id="place-order-btn">
+          <i class="bi bi-lock-fill"></i> Place Order · ₹{{ '{:,.0f}'.format(total) }}
+        </button>
+
+        <p style="font-size:var(--text-xs);color:var(--c-text-3);text-align:center;margin-top:var(--sp-3)">
+          <i class="bi bi-shield-check" style="color:var(--c-success)"></i>
+          Your information is protected by 256-bit SSL encryption
+        </p>
+      </div>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %}
+
+{# ── Macro for new address fields ── #}
+{% macro _new_addr_fields() %}
+<div class="form-group">
+  <label class="form-label">Full Name</label>
+  <input type="text" name="new_name" class="form-input" placeholder="Your full name" value="{{ session.name }}" />
+</div>
+<div class="form-group">
+  <label class="form-label">Phone</label>
+  <input type="tel" name="new_phone" class="form-input" placeholder="10-digit mobile number" />
+</div>
+<div class="form-group">
+  <label class="form-label">Address Line 1</label>
+  <input type="text" name="new_line1" class="form-input" placeholder="House/Flat/Street" />
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-3)">
+  <div class="form-group">
+    <label class="form-label">City</label>
+    <input type="text" name="new_city" class="form-input" placeholder="City" />
+  </div>
+  <div class="form-group">
+    <label class="form-label">State</label>
+    <input type="text" name="new_state" class="form-input" placeholder="State" />
+  </div>
+  <div class="form-group">
+    <label class="form-label">PIN Code</label>
+    <input type="text" name="new_pin" class="form-input" placeholder="6-digit PIN" maxlength="6" />
+  </div>
+</div>
+{% endmacro %}
+
+{% block scripts %}
+<script>
+  document.getElementById('place-order-btn')?.addEventListener('click', function() {
+    this.classList.add('loading');
+    this.disabled = true;
+  });
+
+  function applyCoupon() {
+    const code = document.getElementById('coupon-input')?.value?.trim();
+    const msgEl = document.getElementById('coupon-msg');
+    if (!code) return;
+    const subtotal = {{ subtotal }};
+    fetch('/orders/api/apply-coupon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, subtotal })
+    })
+    .then(r => r.json())
+    .then(data => {
+      msgEl.style.display = 'block';
+      if (data.ok) {
+        msgEl.style.color = 'var(--c-success)';
+        msgEl.textContent = data.message;
+        setTimeout(() => {
+          window.location.href = '/orders/checkout?coupon=' + encodeURIComponent(code);
+        }, 800);
+      } else {
+        msgEl.style.color = 'var(--c-error)';
+        msgEl.textContent = data.message;
+      }
+    });
+  }
+
+  // Fix responsive layout
+  function fixCheckoutLayout() {
+    const form = document.getElementById('checkout-form');
+    if (!form) return;
+    const grid = form.querySelector('div[style*="grid-template-columns"]');
+    if (grid) {
+      grid.style.gridTemplateColumns = window.innerWidth < 768 ? '1fr' : '1.2fr .8fr';
+    }
+  }
+  fixCheckoutLayout();
+  window.addEventListener('resize', fixCheckoutLayout);
+</script>
+{% endblock %}

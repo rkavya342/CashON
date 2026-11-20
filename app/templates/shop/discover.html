@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Discover — CASHON{% endblock %}
+{% block meta_desc %}Discover trending products, new arrivals and budget picks across every CASHON category.{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}?v=1" />{% endblock %}
+
+{% block content %}
+<div class="dx">
+
+  <header class="dx-hero">
+    <div class="container dx-hero__grid">
+     <div>
+      <h1 class="dx-hero__title">Find something you didn't know you needed.</h1>
+      <p class="dx-hero__lede">{{ total_products }} products across {{ categories|length }} categories — start with what's trending, or jump straight to a category.</p>
+      <form class="dx-search" action="{{ url_for('shop.listing') }}" method="get" role="search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" name="q" placeholder="Search headphones, kurtas, serums…" aria-label="Search products" autocomplete="off">
+        <button type="submit">Search</button>
+      </form>
+     </div>
+     {% set shown = [] %}
+     {% for p in trending %}{% if p.image and p.image.startswith('/static/') and shown|length < 3 %}{% set _ = shown.append(p) %}{% endif %}{% endfor %}
+     {% if shown|length == 3 %}
+     <div class="dx-mosaic" aria-label="Trending picks">
+       {% for p in shown %}<a href="{{ url_for('shop.product', slug=p.slug) }}" aria-label="{{ p.name }}"><img src="{{ p.image }}" alt="{{ p.name }}"></a>{% endfor %}
+     </div>
+     {% endif %}
+    </div>
+  </header>
+
+  <section class="dx-section" aria-labelledby="dx-cats">
+    <div class="container">
+      <div class="dx-head"><h2 id="dx-cats">Browse by category</h2></div>
+      <div class="dx-cats">
+        {% for cat in categories %}
+        <a class="dx-cat" href="{{ url_for('shop.listing') }}?category={{ cat.slug }}">
+          <span class="dx-cat__txt">
+            <span class="dx-cat__icon" aria-hidden="true">{{ cat.icon }}</span>
+            <strong>{{ cat.name }}</strong>
+            <small>{{ cat.product_count }} product{{ '' if cat.product_count == 1 else 's' }}</small>
+          </span>
+          {% if cat.image %}<span class="dx-cat__img"><img src="{{ cat.image }}" alt="" loading="lazy"></span>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  {% macro rail(id, title, hint, items, more_href, more_label) %}
+  {% if items %}
+  <section class="dx-section" aria-labelledby="{{ id }}">
+    <div class="container">
+      <div class="dx-head">
+        <div>
+          <h2 id="{{ id }}">{{ title }}</h2>
+          <p class="dx-head__hint">{{ hint }}</p>
+        </div>
+        <a class="dx-more" href="{{ more_href }}">{{ more_label }}</a>
+      </div>
+      <div class="product-grid">
+        {% for p in items %}{% include "shop/_dx_card.html" %}{% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+  {% endmacro %}
+
+  {{ rail('dx-trending', 'Trending right now', 'Most-reviewed products with the best ratings.', trending, url_for('shop.listing') ~ '?sort=popular', 'See all popular') }}
+  {{ rail('dx-new', 'Just in', 'The newest additions to the shop.', fresh, url_for('shop.listing') ~ '?sort=newest', 'See all new') }}
+  {{ rail('dx-budget', 'Good finds under ₹999', 'Well-rated picks that stay easy on the wallet.', budget, url_for('shop.listing') ~ '?max_price=999&sort=rating', 'See all under ₹999') }}
+
+  <section class="dx-section dx-section--last">
+    <div class="container">
+      <a class="dx-banner" href="{{ url_for('shop.deals') }}">
+        <span><strong>Looking for a bargain?</strong> See every product currently on sale, sorted by biggest discount.</span>
+        <span class="dx-banner__cta">View deals <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

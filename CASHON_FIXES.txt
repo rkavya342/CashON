@@ -1,0 +1,22 @@
+CASHON UPDATE
+==============
+
+- Replaced all 20 external product image URLs with local, bundled product thumbnails.
+- Kept the 36 existing local product images.
+- Updated product, category, and product-gallery image references to local /static paths.
+- Added a local fallback image for broken thumbnails.
+- Removed external image fallbacks from the homepage and cart/search image snippets.
+- Refreshed the login page with a responsive split-screen design and show/hide password.
+- Updated seed.py so future database seeding uses local images instead of remote image URLs.
+- Added a clearer missing-dependency message to run.py.
+- Verified: 56 products, 0 external product image URLs, 0 missing product images.
+- Verified Python files compile and Jinja templates parse.
+
+START
+-----
+Open PowerShell in CASHON_FINAL_FIXED/cashon and run:
+
+    python -m pip install -r requirements.txt
+    python run.py
+
+Then open http://127.0.0.1:5000

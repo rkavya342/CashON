@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Order Confirmed — CASHON{% endblock %}
+
+{% block content %}
+<div style="padding-top:calc(var(--nav-h) + 36px + var(--sp-10));padding-bottom:var(--sp-20)">
+<div class="container container--narrow">
+
+  {# Status banner #}
+  {% if order.payment_status == 'paid' %}
+  <div style="
+    text-align:center;padding:var(--sp-10);
+    background:linear-gradient(135deg,rgba(16,185,129,.12) 0%,rgba(16,185,129,.04) 100%);
+    border:1px solid rgba(16,185,129,.3);border-radius:var(--r-2xl);margin-bottom:var(--sp-8);
+    position:relative;overflow:hidden;
+  ">
+    <div style="font-size:4rem;margin-bottom:var(--sp-4);animation:bounceIn .5s var(--ease-spring)">🎉</div>
+    <h1 style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:900;color:var(--c-text-1);margin:0 0 var(--sp-3)">
+      Order Confirmed!
+    </h1>
+    <p style="color:var(--c-text-2);font-size:var(--text-md);margin:0">
+      Your order <strong style="color:var(--c-primary)">#{{ order.order_number }}</strong> has been placed successfully.
+    </p>
+    <div style="margin-top:var(--sp-5)">
+      <span class="status-badge status-confirmed" style="font-size:var(--text-sm);padding:6px 16px">
+        <i class="bi bi-check-circle-fill"></i> Payment Successful
+      </span>
+    </div>
+  </div>
+  {% elif order.payment_status == 'failed' %}
+  <div style="
+    text-align:center;padding:var(--sp-10);
+    background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);
+    border-radius:var(--r-2xl);margin-bottom:var(--sp-8);
+  ">
+    <div style="font-size:4rem;margin-bottom:var(--sp-4)">❌</div>
+    <h1 style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:900;color:var(--c-text-1);margin:0 0 var(--sp-3)">
+      Payment Failed
+    </h1>
+    <p style="color:var(--c-text-2);margin:0 0 var(--sp-6)">
+      Your order <strong>#{{ order.order_number }}</strong> was placed but payment could not be processed.
+      You can retry the payment below.
+    </p>
+    <button onclick="retryPayment({{ order.id }})" class="btn btn--primary btn--lg">
+      <i class="bi bi-arrow-clockwise"></i> Retry Payment
+    </button>
+  </div>
+  {% else %}
+  <div style="
+    text-align:center;padding:var(--sp-10);
+    background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);
+    border-radius:var(--r-2xl);margin-bottom:var(--sp-8);
+  ">
+    <div style="font-size:4rem;margin-bottom:var(--sp-4)">📦</div>
+    <h1 style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:900;color:var(--c-text-1);margin:0 0 var(--sp-3)">
+      Order Placed!
+    </h1>
+    <p style="color:var(--c-text-2);margin:0">
+      Order <strong>#{{ order.order_number }}</strong> placed. Payment will be collected on delivery.
+    </p>
+  </div>
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-6)">
+
+    {# Order details card #}
+    <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:var(--sp-6)">
+      <h2 style="font-size:var(--text-md);font-weight:800;color:var(--c-text-1);margin-bottom:var(--sp-5)">
+        Order Details
+      </h2>
+      <table style="width:100%;font-size:var(--text-sm)">
+        {% for label, val in [
+          ('Order #', order.order_number),
+          ('Date', order.created_at[:10]),
+          ('Payment', order.payment_method|title),
+          ('Ref', order.payment_ref or '—'),
+        ] %}
+        <tr>
+          <td style="color:var(--c-text-3);padding:var(--sp-2) var(--sp-3) var(--sp-2) 0">{{ label }}</td>
+          <td style="color:var(--c-text-1);font-weight:600">{{ val }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      <div style="margin-top:var(--sp-5)">
+        <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;font-size:var(--text-sm);color:var(--c-text-2)">
+          <span>Subtotal</span><span>₹{{ '{:,.0f}'.format(order.subtotal) }}</span>
+        </div>
+        {% if order.discount %}
+        <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;font-size:var(--text-sm);color:var(--c-success)">
+          <span>Discount</span><span>−₹{{ '{:,.0f}'.format(order.discount) }}</span>
+        </div>
+        {% endif %}
+        <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;font-size:var(--text-sm);color:var(--c-text-2)">
+          <span>Shipping</span>
+          <span>{{ 'FREE' if order.shipping_fee == 0 else '₹' ~ order.shipping_fee }}</span>
+        </div>
+        <div style="border-top:1px solid var(--c-border);margin-top:var(--sp-2);padding-top:var(--sp-3);display:flex;justify-content:space-between">
+          <span style="font-weight:800">Total</span>
+          <span style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:900;color:var(--c-text-1)">
+            ₹{{ '{:,.0f}'.format(order.total) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {# Delivery address #}
+    <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:var(--sp-6)">
+      <h2 style="font-size:var(--text-md);font-weight:800;color:var(--c-text-1);margin-bottom:var(--sp-5)">
+        <i class="bi bi-geo-alt-fill" style="color:var(--c-primary)"></i> Delivering To
+      </h2>
+      <p style="font-weight:700;color:var(--c-text-1)">{{ addr.get('full_name','') }}</p>
+      <p style="color:var(--c-text-2);font-size:var(--text-sm);line-height:1.75">
+        {{ addr.get('line1','') }}<br>
+        {{ addr.get('city','') }}, {{ addr.get('state','') }} — {{ addr.get('pincode','') }}<br>
+        {{ addr.get('phone','') }}
+      </p>
+
+      {# Order timeline #}
+      <div style="margin-top:var(--sp-6)">
+        <h3 style="font-size:var(--text-sm);font-weight:700;color:var(--c-text-2);margin-bottom:var(--sp-4)">Status</h3>
+        <div class="order-timeline">
+          {% for step, label in [('placed','Order Placed'),('confirmed','Confirmed'),('packed','Packed'),('shipped','Shipped'),('delivered','Delivered')] %}
+          {% set statuses = ['placed','confirmed','packed','shipped','delivered'] %}
+          {% set current_idx = statuses.index(order.status) if order.status in statuses else 0 %}
+          {% set step_idx = statuses.index(step) %}
+          <div class="timeline-step {{ 'done' if step_idx < current_idx else ('active' if step_idx == current_idx else '') }}">
+            <div class="timeline-label">{{ label }}</div>
+            {% if step_idx <= current_idx %}
+            <div class="timeline-time">{{ order.updated_at[:10] if step_idx == current_idx else order.created_at[:10] }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Items ordered #}
+  <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:var(--sp-6);margin-top:var(--sp-6)">
+    <h2 style="font-size:var(--text-md);font-weight:800;color:var(--c-text-1);margin-bottom:var(--sp-5)">
+      Items Ordered ({{ items|length }})
+    </h2>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+      {% for item in items %}
+      <div style="display:flex;gap:var(--sp-4);align-items:center">
+        <img src="{{ item.image }}" alt="{{ item.name }}"
+             style="width:64px;height:64px;object-fit:cover;border-radius:var(--r-md);flex-shrink:0;border:1px solid var(--c-border)" />
+        <div style="flex:1">
+          <p style="font-weight:600;color:var(--c-text-1);margin:0">{{ item.name }}</p>
+          <p style="font-size:var(--text-xs);color:var(--c-text-3);margin:4px 0 0">Qty: {{ item.qty }}</p>
+        </div>
+        <span style="font-weight:700;color:var(--c-text-1)">₹{{ '{:,.0f}'.format(item.unit_price * item.qty) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# CTAs #}
+  <div style="display:flex;gap:var(--sp-4);margin-top:var(--sp-8);flex-wrap:wrap">
+    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="btn btn--primary btn--lg">
+      <i class="bi bi-bag-check"></i> View Order Details
+    </a>
+    <a href="{{ url_for('shop.listing') }}" class="btn btn--ghost btn--lg">
+      Continue Shopping →
+    </a>
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  @keyframes bounceIn {
+    0%  { transform:scale(0); opacity:0; }
+    60% { transform:scale(1.2); }
+    100%{ transform:scale(1); opacity:1; }
+  }
+
+  function retryPayment(orderId) {
+    const btn = event.currentTarget;
+    btn.classList.add('loading');
+    btn.disabled = true;
+    fetch(`/orders/${orderId}/retry-payment`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          showToast('success', 'Payment successful!', data.message);
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          showToast('error', 'Payment failed', data.message);
+          btn.classList.remove('loading');
+          btn.disabled = false;
+        }
+      });
+  }
+
+  // Responsive grid
+  function fixGrid() {
+    document.querySelectorAll('[style*="grid-template-columns: 1fr 1fr"]').forEach(el => {
+      if (el.style.gridTemplateColumns === '1fr 1fr') {
+        el.style.gridTemplateColumns = window.innerWidth < 768 ? '1fr' : '1fr 1fr';
+      }
+    });
+  }
+  fixGrid();
+  window.addEventListener('resize', fixGrid);
+</script>
+{% endblock %}

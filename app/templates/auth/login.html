@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Sign In — CashOn{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v=1" />{% endblock %}
+{% block content %}
+<section class="au">
+  <div class="au-art">
+    <div>
+      <h1 class="au-title">Your wishlist missed you.</h1>
+      <p class="au-lede">Sign in to pick up your cart, saved items and order tracking right where you left them.</p>
+    </div>
+    {% include "auth/_au_board.html" %}
+    <ul class="au-perks">
+      <li><i class="bi bi-heart"></i> Wishlist across devices</li>
+      <li><i class="bi bi-truck"></i> Live order tracking</li>
+      <li><i class="bi bi-tag"></i> Member-only deals</li>
+    </ul>
+  </div>
+
+  <div class="au-panel">
+    <div class="au-form">
+      <h2 class="au-h">Sign in</h2>
+      <p class="au-sub">Welcome back — pick up where you left off.</p>
+
+      {% if error %}<div class="au-alert" role="alert"><i class="bi bi-exclamation-circle"></i><span>{{ error }}</span></div>{% endif %}
+
+      <form method="POST" action="{{ url_for('auth.login') }}{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}">
+        <div class="au-field">
+          <label for="email">Email address</label>
+          <input class="au-input" type="email" id="email" name="email" value="{{ form_data.get('email','') }}" placeholder="you@example.com" autocomplete="email" required autofocus>
+        </div>
+        <div class="au-field">
+          <label for="password">Password</label>
+          <div class="au-pw">
+            <input class="au-input" type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+            <button type="button" class="au-toggle" id="toggle-pw" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
+          <p class="au-note is-warn" id="caps-note" role="status" hidden>Caps Lock is on.</p>
+        </div>
+        <button class="au-submit" type="submit">Sign in <i class="bi bi-arrow-right"></i></button>
+      </form>
+
+      <p class="au-foot">New to CashOn? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+
+      <div class="au-demo">
+        <p class="au-demo-title">Just looking around? Fill in a demo account:</p>
+        <div class="au-demo-row">
+          {% for label, email, pw in [("Admin","admin@cashon.local","Admin@1234"),("Customer","alice@example.com","Password1!")] %}
+          <button type="button" class="au-chip quick-fill-btn" data-email="{{ email }}" data-pw="{{ pw }}"><b>{{ label }}</b><span>{{ email }}</span></button>
+          {% endfor %}
+        </div>
+      </div>
+      <p class="au-secure"><i class="bi bi-lock"></i> Your details stay private and secure.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var toggle = document.getElementById("toggle-pw");
+  var password = document.getElementById("password");
+  var caps = document.getElementById("caps-note");
+  if (toggle && password) {
+    toggle.addEventListener("click", function () {
+      var reveal = password.type === "password";
+      password.type = reveal ? "text" : "password";
+      toggle.textContent = reveal ? "Hide" : "Show";
+      toggle.setAttribute("aria-label", reveal ? "Hide password" : "Show password");
+      toggle.setAttribute("aria-pressed", reveal ? "true" : "false");
+    });
+    // Caps Lock hint
+    function capsCheck(e) {
+      if (!caps || !e.getModifierState) return;
+      caps.hidden = !e.getModifierState("CapsLock");
+    }
+    password.addEventListener("keyup", capsCheck);
+    password.addEventListener("keydown", capsCheck);
+    password.addEventListener("blur", function () { if (caps) caps.hidden = true; });
+  }
+  document.querySelectorAll(".quick-fill-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.getElementById("email").value = btn.dataset.email;
+      password.value = btn.dataset.pw;
+      password.type = "password";
+      if (toggle) { toggle.textContent = "Show"; toggle.setAttribute("aria-pressed", "false"); }
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,1 @@
+Only the product image URL fields for these four product slugs were changed: oneplus-12-5g, logitech-mx-master-3s, boat-airdopes-141, mi-65w-charger. No templates, styles, routes, features, prices, or other product records were modified. Image hosts require an internet connection.

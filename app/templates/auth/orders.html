@@ -1,0 +1,317 @@
+{#
+  auth/orders.html — Full order history page.
+  Shows all past orders as cards with status timeline, items list and totals.
+#}
+{% extends "base.html" %}
+{% block title %}My Orders — CashOn{% endblock %}
+
+{% block head %}
+<style>
+/* ── Order history styles ────────────────────────────────────── */
+.order-card {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-xl);
+  overflow: hidden;
+}
+.order-card__header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-xl);
+  background: var(--cream);
+  border-bottom: 1px solid var(--cream-deep);
+}
+.order-card__id {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--burgundy);
+}
+.order-card__meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.order-card__body { padding: var(--space-lg) var(--space-xl); }
+
+/* Order item row */
+.order-item-row {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--cream-deep);
+}
+.order-item-row:last-child { border-bottom: none; }
+.order-item-img {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--cream-deep);
+}
+.order-item-name {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.order-item-meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+.order-item-price {
+  margin-left: auto;
+  font-weight: 800;
+  color: var(--burgundy);
+  white-space: nowrap;
+}
+
+/* Status badge */
+.order-status-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.3em 0.9em;
+  border-radius: 999px;
+}
+.status--placed    { background:#FEF3C7; color:#92400E; }
+.status--confirmed { background:#DBEAFE; color:#1E40AF; }
+.status--shipped   { background:#EDE9FE; color:#5B21B6; }
+.status--delivered { background:#D1FAE5; color:#065F46; }
+.status--cancelled { background:#FEE2E2; color:#991B1B; }
+
+/* Tracking timeline */
+.timeline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: var(--space-lg) 0 var(--space-md);
+  position: relative;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  background: var(--cream-deep);
+  z-index: 0;
+}
+.timeline-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+.timeline-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--cream-deep);
+  border: 2px solid var(--cream-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.timeline-dot.done {
+  background: var(--burgundy);
+  border-color: var(--burgundy);
+  color: white;
+}
+.timeline-dot.active {
+  background: var(--chartreuse);
+  border-color: var(--burgundy);
+  color: var(--burgundy);
+  box-shadow: 0 0 0 4px rgba(200,230,28,0.25);
+}
+.timeline-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-top: 0.4rem;
+  text-align: center;
+  max-width: 60px;
+  line-height: 1.2;
+}
+
+/* Totals section */
+.order-totals {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 2px solid var(--cream-deep);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+.order-totals__row {
+  display: flex;
+  gap: 2rem;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.order-totals__row.total {
+  font-weight: 800;
+  color: var(--burgundy);
+  font-size: var(--text-base);
+  margin-top: 0.3rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:2.5rem;padding-bottom:4rem">
+
+  {# Back breadcrumb #}
+  <nav aria-label="breadcrumb" style="margin-bottom:var(--space-lg)">
+    <a href="{{ url_for('auth.profile') }}"
+       style="font-size:var(--text-sm);color:var(--text-secondary);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem">
+      <i class="bi bi-arrow-left"></i> Back to My Account
+    </a>
+  </nav>
+
+  <h1 class="page-title" style="margin-bottom:var(--space-sm)">My Orders</h1>
+  <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-2xl)">
+    {% if orders %}{{ orders|length }} order{{ 's' if orders|length != 1 }} in total.{% else %}No orders yet.{% endif %}
+  </p>
+
+  {% if orders %}
+    {% for order in orders %}
+    {# ── Order Card ───────────────────────────────────────────── #}
+    <div class="order-card">
+
+      {# Header row #}
+      <div class="order-card__header">
+        <div>
+          <div class="order-card__id">Order #{{ order.id }}</div>
+          <div class="order-card__meta">
+            <i class="bi bi-calendar3"></i>
+            {{ order.created_at[:10] }}
+          </div>
+        </div>
+
+        <span class="order-status-badge status--{{ order.status }}">{{ order.status }}</span>
+
+        {% if order.coupon_code %}
+        <span style="font-size:var(--text-xs);background:var(--blush);color:var(--burgundy);padding:0.2em 0.6em;border-radius:999px;font-weight:700">
+          <i class="bi bi-tag"></i> {{ order.coupon_code }}
+        </span>
+        {% endif %}
+
+        <div style="margin-left:auto;font-weight:800;font-size:var(--text-lg);color:var(--burgundy)">
+          ${{ "%.2f"|format(order.total) }}
+        </div>
+      </div>
+
+      <div class="order-card__body">
+
+        {# ── Status timeline ──────────────────────────────────── #}
+        {% set steps = ['placed','confirmed','shipped','delivered'] %}
+        {% set step_icons = ['bi-bag-plus','bi-check-circle','bi-truck','bi-house-check'] %}
+        {% set current_idx = steps.index(order.status) if order.status in steps else 0 %}
+
+        <div class="timeline">
+          {% for step in steps %}{% set i = loop.index0 %}{% set icon = step_icons[loop.index0] %}
+          <div class="timeline-step">
+            <div class="timeline-dot {% if i < current_idx %}done{% elif i == current_idx %}active{% endif %}">
+              <i class="bi {{ icon }}"></i>
+            </div>
+            <div class="timeline-label">{{ step }}</div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {# ── Items list ──────────────────────────────────────────── #}
+        {% if order['items'] %}
+          {% for item in order['items'] %}
+          <div class="order-item-row">
+            <img class="order-item-img"
+                 src="{{ item.image }}"
+                 alt="{{ item.name }}"
+                 loading="lazy">
+            <div style="flex:1;min-width:0">
+              <div class="order-item-name">{{ item.name }}</div>
+              <div class="order-item-meta">
+                Qty: {{ item.qty }}
+                {% if item.size %} · Size: {{ item.size }}{% endif %}
+                {% if item.colour %} · {{ item.colour }}{% endif %}
+              </div>
+            </div>
+            <div class="order-item-price">${{ "%.2f"|format(item.unit_price * item.qty) }}</div>
+          </div>
+          {% endfor %}
+        {% endif %}
+
+        {# ── Order totals ────────────────────────────────────────── #}
+        <div class="order-totals">
+          <div class="order-totals__row">
+            <span>Subtotal</span>
+            <span>${{ "%.2f"|format(order.subtotal) }}</span>
+          </div>
+          {% if order.discount and order.discount > 0 %}
+          <div class="order-totals__row" style="color:#059669">
+            <span>Discount</span>
+            <span>−${{ "%.2f"|format(order.discount) }}</span>
+          </div>
+          {% endif %}
+          <div class="order-totals__row">
+            <span>Shipping</span>
+            <span>
+              {% if order.shipping_fee == 0 %}FREE{% else %}${{ "%.2f"|format(order.shipping_fee) }}{% endif %}
+            </span>
+          </div>
+          <div class="order-totals__row total">
+            <span>Total</span>
+            <span>${{ "%.2f"|format(order.total) }}</span>
+          </div>
+        </div>
+
+        {# Shipping address #}
+        {% if order.address %}
+                <div style="margin-top:var(--space-md);padding:var(--space-md);background:var(--cream);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text-secondary)">
+          <i class="bi bi-geo-alt"></i>
+          <strong>Shipped to:</strong>
+          {% set a = order.address %}
+          {% if a is string %}
+            {{ a }}
+          {% else %}
+            {{ a.full_name or a.name }}, {{ a.line1 }}, {{ a.city }}, {{ a.state }} {{ a.pincode or a.zip }}
+          {% endif %}
+        </div>
+        {% endif %}
+
+      </div>{# end body #}
+    </div>{# end order-card #}
+    {% endfor %}
+
+  {% else %}
+    {# Empty state #}
+    <div style="text-align:center;padding:5rem 1rem;background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow-md)">
+      <i class="bi bi-bag" style="font-size:4rem;color:var(--cream-deep);display:block;margin-bottom:1rem"></i>
+      <h2 style="color:var(--burgundy);margin-bottom:0.5rem">No orders yet</h2>
+      <p style="color:var(--text-secondary);max-width:360px;margin:0 auto 1.5rem">
+        Looks like you haven't placed any orders yet. Time to treat yourself!
+      </p>
+      <a href="{{ url_for('shop.listing') }}" class="btn btn--primary btn--lg">
+        Start Shopping →
+      </a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

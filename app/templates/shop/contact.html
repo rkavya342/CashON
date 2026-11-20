@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Contact — CashOn{% endblock %}
+{% block content %}
+<div class="container container--narrow" style="padding-top:4rem;padding-bottom:4rem">
+  <h1 class="page-title">Contact Us</h1>
+  <p style="color:var(--text-secondary);margin-bottom:2rem">We'd love to hear from you!</p>
+
+  <form class="sc-card p-lg" id="contact-form">
+    <div class="form-group">
+      <label class="form-label" for="c-name">Name</label>
+      <input class="form-control" id="c-name" type="text" placeholder="Your name" required />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="c-email">Email</label>
+      <input class="form-control" id="c-email" type="email" placeholder="you@example.com" required />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="c-msg">Message</label>
+      <textarea class="form-control" id="c-msg" rows="5" placeholder="Tell us anything…" required></textarea>
+    </div>
+    <button type="submit" class="btn btn--primary">Send Message</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById("contact-form").addEventListener("submit", e => {
+    e.preventDefault();
+    showToast("Message sent! We'll reply within 24 hours.", "success");
+    e.target.reset();
+  });
+</script>
+{% endblock %}

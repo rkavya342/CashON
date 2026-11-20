@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Deals — CASHON{% endblock %}
+{% block meta_desc %}Every CASHON product currently on sale, sorted by the biggest discount.{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}?v=1" />{% endblock %}
+
+{% macro dlink(cat=None, off=None, srt=None) -%}
+{{ url_for('shop.deals', category=(cat or None), min_off=(off or None), sort=(srt if srt and srt != 'discount' else None)) }}
+{%- endmacro %}
+
+{% block content %}
+<div class="dx">
+
+  <header class="dx-hero dx-hero--deals">
+    <div class="container">
+      <h1 class="dx-hero__title">Deals</h1>
+      <p class="dx-hero__lede">
+        {% if deal_count %}{{ deal_count }} products on sale right now, with savings of up to {{ best_off }}%.{% else %}No products are on sale at the moment — check back soon.{% endif %}
+      </p>
+    </div>
+  </header>
+
+  {% if top_deal %}
+  <section class="dx-section dx-section--tight" aria-label="Biggest saving">
+    <div class="container">
+      <a class="dx-top" href="{{ url_for('shop.product', slug=top_deal.slug) }}">
+        <span class="dx-top__img">
+          {% if top_deal.image %}<img src="{{ top_deal.image }}" alt="{{ top_deal.name }}" loading="lazy">{% else %}<span class="product-photo-missing">Photo unavailable</span>{% endif %}
+        </span>
+        <span class="dx-top__body">
+          <span class="dx-top__tag">Biggest saving: {{ top_deal.off_pct }}% off</span>
+          <strong class="dx-top__name">{{ top_deal.name }}</strong>
+          <span class="dx-top__price">
+            <b>₹{{ '{:,.0f}'.format(top_deal.sale_price) }}</b>
+            <s>₹{{ '{:,.0f}'.format(top_deal.price) }}</s>
+            <em>You save ₹{{ '{:,.0f}'.format(top_deal.saving) }}</em>
+          </span>
+          <span class="dx-top__cta">View deal <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+        </span>
+      </a>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="dx-section dx-section--tight" aria-label="Deal filters">
+    <div class="container">
+      <div class="dx-filters">
+        <div class="dx-filter-row" role="group" aria-label="Minimum discount">
+          <span class="dx-filter-label">Discount</span>
+          {% for t, label in [(0,'All deals'),(10,'10% +'),(20,'20% +'),(30,'30% +')] %}
+          <a class="dx-chip {{ 'is-on' if min_off == t else '' }}" href="{{ dlink(current_cat, t, sort) }}" {% if min_off == t %}aria-current="true"{% endif %}>{{ label }} <small>{{ tier_counts[t] }}</small></a>
+          {% endfor %}
+        </div>
+        <div class="dx-filter-row" role="group" aria-label="Category">
+          <span class="dx-filter-label">Category</span>
+          <a class="dx-chip {{ 'is-on' if not current_cat else '' }}" href="{{ dlink(None, min_off, sort) }}">All</a>
+          {% for cat in categories %}
+          <a class="dx-chip {{ 'is-on' if cat.slug == current_cat else '' }}" href="{{ dlink(cat.slug, min_off, sort) }}">{{ cat.icon }} {{ cat.name }}</a>
+          {% endfor %}
+        </div>
+        <div class="dx-filter-row" role="group" aria-label="Sort">
+          <span class="dx-filter-label">Sort</span>
+          {% for key, label in [('discount','Biggest discount'),('price_asc','Price: low to high'),('price_desc','Price: high to low'),('rating','Top rated')] %}
+          <a class="dx-chip {{ 'is-on' if sort == key else '' }}" href="{{ dlink(current_cat, min_off, key) }}">{{ label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dx-section dx-section--last" aria-label="Deal products">
+    <div class="container">
+      {% if products %}
+      <p class="dx-count">Showing {{ products|length }} deal{{ '' if products|length == 1 else 's' }}</p>
+      <div class="product-grid">
+        {% for p in products %}{% include "shop/_dx_card.html" %}{% endfor %}
+      </div>
+      {% else %}
+      <div class="dx-empty">
+        <h2>No deals match those filters</h2>
+        <p>Try a lower discount or a different category.</p>
+        <a class="btn btn--primary" href="{{ url_for('shop.deals') }}">Show all deals</a>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

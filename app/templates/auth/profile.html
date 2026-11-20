@@ -1,0 +1,342 @@
+{#
+  auth/profile.html — My Account page
+  Shows: avatar, editable info, change-password form, recent orders sidebar, wishlist count.
+#}
+{% extends "base.html" %}
+{% block title %}My Account — CashOn{% endblock %}
+
+{% block head %}
+<style>
+/* ── Profile page layout ──────────────────────────────────────── */
+.profile-wrap {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--space-2xl);
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .profile-wrap { grid-template-columns: 1fr; }
+}
+
+/* Sidebar card */
+.profile-sidebar {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  position: sticky;
+  top: 90px;
+}
+.profile-sidebar__header {
+  background: var(--burgundy);
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+  color: var(--white);
+}
+.profile-avatar-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--chartreuse);
+  color: var(--burgundy);
+  font-size: 1.75rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-sm);
+  border: 3px solid rgba(255,255,255,0.3);
+}
+.profile-sidebar__nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem var(--space-lg);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  border-left: 3px solid transparent;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.profile-sidebar__nav a:hover,
+.profile-sidebar__nav a.active {
+  background: var(--cream);
+  border-left-color: var(--burgundy);
+  color: var(--burgundy);
+}
+.profile-sidebar__nav a i { font-size: 1.1rem; opacity: 0.7; }
+
+/* Main content cards */
+.profile-card {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-xl) var(--space-2xl);
+  margin-bottom: var(--space-xl);
+}
+.profile-card__title {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--burgundy);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 2px solid var(--cream-deep);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Order mini-row */
+.order-mini {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--cream-deep);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.1s;
+}
+.order-mini:last-child { border-bottom: none; }
+.order-mini:hover { background: var(--cream); border-radius: var(--radius-sm); padding-left: 0.5rem; }
+.order-mini__id { font-weight: 700; color: var(--burgundy); font-size: var(--text-sm); }
+.order-mini__meta { font-size: var(--text-xs); color: var(--text-secondary); }
+.order-status-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2em 0.6em;
+  border-radius: 999px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.status--placed    { background:#FEF3C7; color:#92400E; }
+.status--confirmed { background:#DBEAFE; color:#1E40AF; }
+.status--shipped   { background:#EDE9FE; color:#5B21B6; }
+.status--delivered { background:#D1FAE5; color:#065F46; }
+.status--cancelled { background:#FEE2E2; color:#991B1B; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:2.5rem;padding-bottom:4rem">
+
+  {# Page heading #}
+  <div style="margin-bottom:var(--space-xl)">
+    <h1 class="page-title" style="margin-bottom:0.25rem">My Account</h1>
+    <p style="color:var(--text-secondary);font-size:var(--text-sm)">
+      Manage your profile, password and orders all in one place.
+    </p>
+  </div>
+
+  <div class="profile-wrap">
+
+    {# ═══════════════════════════════════════════════════════════════════
+       LEFT SIDEBAR — avatar, name, quick nav
+    ═══════════════════════════════════════════════════════════════════ #}
+    <aside class="profile-sidebar">
+      <div class="profile-sidebar__header">
+        {# Initials avatar #}
+        <div class="profile-avatar-circle">
+          {{ user.name[0].upper() }}
+        </div>
+        <div style="font-weight:800;font-size:var(--text-base)">{{ user.name }}</div>
+        <div style="font-size:var(--text-xs);opacity:0.75;margin-top:0.2rem">{{ user.email }}</div>
+        {% if user.role == "admin" %}
+        <span style="margin-top:0.5rem;display:inline-block;background:var(--chartreuse);color:var(--burgundy);font-size:0.6rem;font-weight:800;padding:0.2em 0.7em;border-radius:999px;letter-spacing:0.1em">ADMIN</span>
+        {% endif %}
+      </div>
+
+      <nav class="profile-sidebar__nav">
+        <a href="{{ url_for('auth.profile') }}" class="active">
+          <i class="bi bi-person-circle"></i> My Profile
+        </a>
+        <a href="{{ url_for('auth.order_history') }}">
+          <i class="bi bi-bag-check"></i> My Orders
+          {% if orders %}<span style="margin-left:auto;background:var(--blush);color:var(--burgundy);font-size:0.65rem;font-weight:700;padding:0.1em 0.5em;border-radius:999px">{{ orders|length }}</span>{% endif %}
+        </a>
+        <a href="{{ url_for('auth.wishlist') }}">
+          <i class="bi bi-heart"></i> Wishlist
+          {% if wl_count %}<span style="margin-left:auto;background:var(--blush);color:var(--burgundy);font-size:0.65rem;font-weight:700;padding:0.1em 0.5em;border-radius:999px">{{ wl_count }}</span>{% endif %}
+        </a>
+        {% if user.role == "admin" %}
+        <a href="{{ url_for('admin.dashboard') }}">
+          <i class="bi bi-speedometer2"></i> Admin Panel
+        </a>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}" style="color:#C0392B">
+          <i class="bi bi-box-arrow-right"></i> Sign Out
+        </a>
+      </nav>
+    </aside>
+
+    {# ═══════════════════════════════════════════════════════════════════
+       RIGHT CONTENT AREA
+    ═══════════════════════════════════════════════════════════════════ #}
+    <div>
+
+      {# ── Edit Profile Card ─────────────────────────────────────────── #}
+      <div class="profile-card">
+        <h2 class="profile-card__title">
+          <i class="bi bi-pencil-square"></i> Edit Profile
+        </h2>
+
+        <form method="POST" action="{{ url_for('auth.profile') }}" novalidate>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg)">
+
+            <div class="form-group">
+              <label class="form-label" for="name">Full Name</label>
+              <input class="form-input" id="name" name="name" type="text"
+                     value="{{ user.name }}" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="email">Email Address</label>
+              <input class="form-input" id="email" type="email"
+                     value="{{ user.email }}" disabled
+                     style="opacity:0.6;cursor:not-allowed"
+                     title="Email cannot be changed">
+              <span style="font-size:var(--text-xs);color:var(--text-secondary)">Email cannot be changed</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="phone">Phone Number</label>
+              <input class="form-input" id="phone" name="phone" type="tel"
+                     value="{{ user.phone or '' }}" placeholder="+1 555 000 0000">
+            </div>
+
+            <div class="form-group" style="grid-column:1/-1">
+              <label class="form-label" for="address">Default Delivery Address</label>
+              <textarea class="form-input" id="address" name="address" rows="3"
+                        placeholder="Street, City, State, ZIP">{{ user.address or '' }}</textarea>
+            </div>
+
+          </div>
+
+          <div style="margin-top:var(--space-lg)">
+            <button type="submit" class="btn btn--primary">
+              <i class="bi bi-check-circle"></i> Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {# ── Change Password Card ──────────────────────────────────────── #}
+      <div class="profile-card">
+        <h2 class="profile-card__title">
+          <i class="bi bi-shield-lock"></i> Change Password
+        </h2>
+
+        <form method="POST" action="{{ url_for('auth.change_password') }}" novalidate>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg)">
+
+            <div class="form-group" style="grid-column:1/-1">
+              <label class="form-label" for="current_password">Current Password</label>
+              <div style="position:relative">
+                <input class="form-input" id="current_password" name="current_password"
+                       type="password" required placeholder="Enter current password"
+                       style="padding-right:3rem">
+                <button type="button" class="pw-toggle"
+                        onclick="togglePw('current_password', this)"
+                        aria-label="Toggle password visibility"
+                        style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-secondary)">
+                  <i class="bi bi-eye" style="font-size:1.1rem"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="new_password">New Password</label>
+              <div style="position:relative">
+                <input class="form-input" id="new_password" name="new_password"
+                       type="password" required placeholder="At least 6 characters"
+                       style="padding-right:3rem">
+                <button type="button" class="pw-toggle"
+                        onclick="togglePw('new_password', this)"
+                        aria-label="Toggle password visibility"
+                        style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-secondary)">
+                  <i class="bi bi-eye" style="font-size:1.1rem"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="confirm_password">Confirm New Password</label>
+              <div style="position:relative">
+                <input class="form-input" id="confirm_password" name="confirm_password"
+                       type="password" required placeholder="Repeat new password"
+                       style="padding-right:3rem">
+                <button type="button" class="pw-toggle"
+                        onclick="togglePw('confirm_password', this)"
+                        aria-label="Toggle password visibility"
+                        style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-secondary)">
+                  <i class="bi bi-eye" style="font-size:1.1rem"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="margin-top:var(--space-lg)">
+            <button type="submit" class="btn btn--secondary">
+              <i class="bi bi-lock"></i> Update Password
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {# ── Recent Orders Card ────────────────────────────────────────── #}
+      <div class="profile-card">
+        <h2 class="profile-card__title">
+          <i class="bi bi-bag-check"></i> Recent Orders
+          <a href="{{ url_for('auth.order_history') }}"
+             style="margin-left:auto;font-size:var(--text-sm);font-weight:600;color:var(--royal);text-decoration:none">
+            View all →
+          </a>
+        </h2>
+
+        {% if orders %}
+          {% for o in orders %}
+          <a href="{{ url_for('auth.order_history') }}" class="order-mini">
+            <div>
+              <div class="order-mini__id">#{{ o.id }}</div>
+              <div class="order-mini__meta">
+                {{ o.item_count }} item{{ 's' if o.item_count != 1 }} ·
+                ${{ "%.2f"|format(o.total) }}
+              </div>
+            </div>
+            <span class="order-status-badge status--{{ o.status }}">{{ o.status }}</span>
+          </a>
+          {% endfor %}
+        {% else %}
+          <div style="text-align:center;padding:var(--space-xl);color:var(--text-secondary)">
+            <i class="bi bi-bag" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:0.5rem"></i>
+            <p style="font-size:var(--text-sm)">No orders yet.</p>
+            <a href="{{ url_for('shop.listing') }}" class="btn btn--primary" style="margin-top:var(--space-sm)">
+              Start Shopping →
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+    </div>{# end right column #}
+  </div>{# end profile-wrap #}
+</div>
+
+<script>
+/* Toggle password visibility — shared with login/register */
+function togglePw(fieldId, btn) {
+  const field = document.getElementById(fieldId);
+  const icon  = btn.querySelector('i');
+  if (field.type === 'password') {
+    field.type = 'text';
+    icon.classList.replace('bi-eye', 'bi-eye-slash');
+  } else {
+    field.type = 'password';
+    icon.classList.replace('bi-eye-slash', 'bi-eye');
+  }
+}
+</script>
+{% endblock %}

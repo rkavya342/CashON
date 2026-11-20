@@ -1,0 +1,653 @@
+{#
+  base.html — CASHON Master Layout v2
+  Blocks: title, head, content, scripts
+#}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="{% block meta_desc %}CASHON — India's adaptive multi-category marketplace. Technology, Fashion, Home, Beauty, Sports and more. Shop smart.{% endblock %}" />
+  <meta name="theme-color" content="#F8F5EF" />
+  <meta name="robots" content="index,follow" />
+
+  <title>{% block title %}CASHON — Discover More. Shop Smarter.{% endblock %}</title>
+
+  <!-- Google Fonts: Outfit (display) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+  <!-- CASHON Design System -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=finalwarm20261119" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{# ── Flash messages → toasts ── #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <span data-flash data-flash-type="{{ 'success' if category=='success' else ('error' if category=='danger' else category) }}"
+          style="display:none">{{ message }}</span>
+  {% endfor %}
+{% endwith %}
+
+{# ══════════════════════════════════════════════════════════
+   HEADER: Announcement bar + Navigation
+══════════════════════════════════════════════════════════ #}
+<header class="site-header site-header--transparent" id="site-header" role="banner">
+
+  {# Announcement marquee strip #}
+  <div class="announcement-bar" role="marquee" aria-label="Announcements">
+    <div class="announcement-track" id="announcement-track">
+      {# Duplicated for seamless loop #}
+      {% for _ in range(2) %}
+        <span>🚚 Free delivery on orders above ₹499 <span class="announcement-sep">✦</span></span>
+        <span>🎉 New arrivals every week <span class="announcement-sep">✦</span></span>
+        <span>💳 Use code <strong>SAVE10</strong> for 10% off <span class="announcement-sep">✦</span></span>
+        <span>↩️ 30-day easy returns <span class="announcement-sep">✦</span></span>
+        <span>🔒 Secure payments via UPI, Cards &amp; Wallets <span class="announcement-sep">✦</span></span>
+        <span>🌱 Eco-friendly packaging on select orders <span class="announcement-sep">✦</span></span>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Main Nav #}
+  <div class="nav-inner">
+
+    {# Logo #}
+    <a href="{{ url_for('shop.index') }}" class="nav-logo" aria-label="CASHON Home">
+      CASH<span class="nav-logo-dot">ON</span>
+    </a>
+
+    {# Desktop nav links #}
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="{{ url_for('shop.index') }}"   {% if request.endpoint == 'shop.index'   %}class="active"{% endif %}>Home</a>
+
+      {# Categories mega menu #}
+      <div class="nav-dropdown">
+        <a href="{{ url_for('shop.listing') }}" {% if request.endpoint == 'shop.listing' %}class="active"{% endif %}>Categories</a>
+        <div class="mega-menu" role="navigation" aria-label="Category menu">
+          <div class="mega-menu-grid">
+            {% set cat_data = [
+              ('💻','Technology','technology'),
+              ('🛋️','Furniture & Home','furniture-home'),
+              ('👗','Fashion','fashion'),
+              ('✨','Beauty','beauty'),
+              ('🏃','Sports','sports-fitness'),
+              ('👜','Accessories','accessories'),
+              ('📚','Books','books-lifestyle'),
+              ('🏷️','All Deals',''),
+            ] %}
+            {% for icon, label, slug in cat_data %}
+            <a href="{% if slug %}{{ url_for('shop.listing') }}?category={{ slug }}{% else %}{{ url_for('shop.deals') }}{% endif %}"
+               class="mega-menu-item">
+              <span class="mega-menu-icon">{{ icon }}</span>
+              <span class="mega-menu-label">{{ label }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <a href="{{ url_for('shop.discover') }}" {% if request.endpoint == 'shop.discover' %}class="active"{% endif %}>Discover</a>
+      <a href="{{ url_for('shop.deals') }}" {% if request.endpoint == 'shop.deals' %}class="active"{% endif %}>Deals</a>
+      <a href="{{ url_for('shop.about') }}"   {% if request.endpoint == 'shop.about'   %}class="active"{% endif %}>About</a>
+    </nav>
+
+    {# Right-side actions #}
+    <div class="nav-actions">
+
+      {# Search button #}
+      <button class="nav-search-btn" id="search-open-btn" aria-label="Search (Ctrl+K)">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <span>Search products...</span>
+        <span class="nav-search-kbd">⌘K</span>
+      </button>
+
+      {# Wishlist #}
+      {% if session.user_id %}
+      <a href="{{ url_for('auth.wishlist') }}" class="nav-icon-btn" aria-label="Wishlist" title="Wishlist">
+        <i class="bi bi-heart" aria-hidden="true"></i>
+      </a>
+      {% endif %}
+
+      {# Notifications #}
+      {% if session.user_id %}
+      <a href="{{ url_for('auth.notifications') }}" class="nav-icon-btn" aria-label="Notifications" id="notif-btn" title="Notifications">
+        <i class="bi bi-bell" aria-hidden="true"></i>
+        <span class="nav-badge" id="notif-badge" style="display:none">0</span>
+      </a>
+      {% endif %}
+
+      {# Cart #}
+      <button class="nav-icon-btn" id="cart-open-btn" aria-label="Open cart" data-open-cart>
+        <i class="bi bi-bag" aria-hidden="true"></i>
+        <span class="nav-badge cart-count-badge" aria-live="polite"
+              {% if cart_count == 0 %}style="display:none"{% endif %}>{{ cart_count }}</span>
+      </button>
+
+      {# Account #}
+      {% if session.user_id %}
+        <div class="nav-account-pill">
+          <button class="nav-account-trigger" id="account-btn"
+                  aria-expanded="false" aria-haspopup="true"
+                  aria-label="Account menu for {{ session.name }}">
+            <span class="nav-avatar">{{ session.name[0].upper() }}</span>
+            <span style="font-size:var(--text-sm);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ session.name.split()[0] }}
+            </span>
+            <i class="bi bi-chevron-down" style="font-size:.6rem" aria-hidden="true"></i>
+          </button>
+
+          <div class="account-dropdown" id="account-dropdown" role="menu">
+            <div class="account-dropdown-header">
+              <div class="account-dropdown-name">{{ session.name }}</div>
+              <div class="account-dropdown-email">{{ session.email }}</div>
+              {% if session.role == 'admin' %}
+                <span class="badge badge--admin" style="margin-top:4px">ADMIN</span>
+              {% elif session.role == 'seller' %}
+                <span class="badge badge--seller" style="margin-top:4px">SELLER</span>
+              {% endif %}
+            </div>
+            <a href="{{ url_for('auth.profile') }}"       role="menuitem"><i class="bi bi-person-circle"></i> My Profile</a>
+            <a href="{{ url_for('auth.order_history') }}" role="menuitem"><i class="bi bi-bag-check"></i> My Orders</a>
+            <a href="{{ url_for('auth.wishlist') }}"      role="menuitem"><i class="bi bi-heart"></i> Wishlist</a>
+            <a href="{{ url_for('auth.notifications') }}" role="menuitem"><i class="bi bi-bell"></i> Notifications</a>
+            {% if session.role == 'admin' %}
+            <div class="account-dropdown-divider"></div>
+            <a href="{{ url_for('admin.dashboard') }}"    role="menuitem"><i class="bi bi-grid"></i> Admin Panel</a>
+            {% endif %}
+            {% if session.role == 'seller' %}
+            <div class="account-dropdown-divider"></div>
+            <a href="{{ url_for('seller.dashboard') }}"   role="menuitem"><i class="bi bi-shop"></i> Seller Dashboard</a>
+            {% endif %}
+            <div class="account-dropdown-divider"></div>
+            <a href="{{ url_for('auth.logout') }}" role="menuitem" class="danger"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
+          </div>
+        </div>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}"    class="btn btn--ghost btn--sm">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn--primary btn--sm">Join Free</a>
+      {% endif %}
+
+      {# Hamburger #}
+      <button class="nav-hamburger" id="hamburger-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+{# ══════════════════════════════════════════════════════════
+   Mobile Nav
+══════════════════════════════════════════════════════════ #}
+<div class="mobile-nav" id="mobile-nav" role="dialog" aria-label="Mobile navigation" aria-modal="true">
+  <div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
+  <div class="mobile-nav-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-6)">
+      <a href="{{ url_for('shop.index') }}" class="nav-logo" style="font-size:1.4rem">CASH<span class="nav-logo-dot">ON</span></a>
+      <button id="mobile-nav-close" aria-label="Close menu" style="color:var(--c-text-3);font-size:1.3rem;padding:var(--sp-2)">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <nav aria-label="Mobile navigation">
+      <a href="{{ url_for('shop.index') }}"              class="mobile-nav-link"><i class="bi bi-house"></i> Home</a>
+      <a href="{{ url_for('shop.listing') }}"            class="mobile-nav-link"><i class="bi bi-grid"></i> All Products</a>
+      <a href="{{ url_for('shop.discover') }}"           class="mobile-nav-link"><i class="bi bi-compass"></i> Discover</a>
+      <a href="{{ url_for('shop.deals') }}"              class="mobile-nav-link"><i class="bi bi-tag"></i> Deals</a>
+      <div class="divider"></div>
+      <a href="{{ url_for('shop.listing') }}?category=technology"     class="mobile-nav-link">💻 Technology</a>
+      <a href="{{ url_for('shop.listing') }}?category=furniture-home" class="mobile-nav-link">🛋️ Furniture & Home</a>
+      <a href="{{ url_for('shop.listing') }}?category=fashion"        class="mobile-nav-link">👗 Fashion</a>
+      <a href="{{ url_for('shop.listing') }}?category=beauty"         class="mobile-nav-link">✨ Beauty</a>
+      <a href="{{ url_for('shop.listing') }}?category=sports-fitness" class="mobile-nav-link">🏃 Sports & Fitness</a>
+      <a href="{{ url_for('shop.listing') }}?category=accessories"    class="mobile-nav-link">👜 Accessories</a>
+      <a href="{{ url_for('shop.listing') }}?category=books-lifestyle"class="mobile-nav-link">📚 Books & Lifestyle</a>
+      <div class="divider"></div>
+      {% if session.user_id %}
+        <a href="{{ url_for('auth.profile') }}"       class="mobile-nav-link"><i class="bi bi-person-circle"></i> My Account</a>
+        <a href="{{ url_for('auth.order_history') }}" class="mobile-nav-link"><i class="bi bi-bag-check"></i> My Orders</a>
+        <a href="{{ url_for('auth.wishlist') }}"      class="mobile-nav-link"><i class="bi bi-heart"></i> Wishlist</a>
+        <a href="{{ url_for('auth.logout') }}"        class="mobile-nav-link" style="color:var(--c-error)"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}"    class="btn btn--primary btn--full">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn--ghost btn--full" style="margin-top:var(--sp-3)">Create Account</a>
+      {% endif %}
+    </nav>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════
+   Search Overlay
+══════════════════════════════════════════════════════════ #}
+<div class="search-overlay" id="search-overlay" role="dialog" aria-label="Search" aria-modal="true">
+  <div class="search-modal" role="search">
+    <div class="search-input-wrap">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" id="search-input" class="search-input"
+             placeholder="Search products, brands, categories..."
+             autocomplete="off" aria-label="Search products" spellcheck="false" />
+      <span class="search-kbd">Esc</span>
+    </div>
+    <div class="search-results" id="search-results">
+      <p class="search-hint">
+        <i class="bi bi-lightning-charge" style="color:var(--c-primary)"></i>
+        Start typing to search across 60+ products...
+      </p>
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════
+   Cart Drawer
+══════════════════════════════════════════════════════════ #}
+<div class="cart-backdrop" id="cart-backdrop"></div>
+<aside class="cart-drawer" id="cart-drawer" role="dialog" aria-label="Shopping cart" aria-modal="true">
+  <div class="cart-drawer__header">
+    <h2 class="cart-drawer__title">
+      <i class="bi bi-bag" style="color:var(--c-primary)"></i>
+      Your Cart
+      <span class="badge badge--new" id="cart-drawer-count">{{ cart_count }}</span>
+    </h2>
+    <button class="cart-drawer__close" id="cart-close-btn" aria-label="Close cart" data-close-cart>
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="cart-drawer__items" id="cart-drawer-items">
+    <div class="cart-drawer__empty">
+      <div class="cart-empty-icon">🛍️</div>
+      <p style="font-weight:700;color:var(--c-text-2)">Your cart is empty</p>
+      <p style="font-size:var(--text-sm)">Discover products you'll love</p>
+      <a href="{{ url_for('shop.listing') }}" class="btn btn--primary btn--sm" onclick="closeCart()">Start Shopping →</a>
+    </div>
+  </div>
+
+  <div class="cart-drawer__footer" id="cart-drawer-footer" style="display:none">
+    <div class="cart-total-row">
+      <span class="cart-total-label">Subtotal</span>
+      <span class="cart-total-amount" id="cart-drawer-total">₹0</span>
+    </div>
+    <div style="font-size:var(--text-xs);color:var(--c-text-3);text-align:center">
+      Shipping and taxes calculated at checkout
+    </div>
+    <a href="{{ url_for('shop.cart') }}"     class="btn btn--ghost btn--full">View Full Cart</a>
+    <a href="{{ url_for('orders.checkout') }}" class="btn btn--primary btn--full">Checkout →</a>
+  </div>
+</aside>
+
+{# ══════════════════════════════════════════════════════════
+   Toast container
+══════════════════════════════════════════════════════════ #}
+<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+{# ══════════════════════════════════════════════════════════
+   Page content
+══════════════════════════════════════════════════════════ #}
+<main id="main-content" tabindex="-1">
+  {% block content %}{% endblock %}
+</main>
+
+{# ══════════════════════════════════════════════════════════
+   Footer
+══════════════════════════════════════════════════════════ #}
+{% block footer %}
+<footer class="site-footer" role="contentinfo">
+  <div class="container">
+    <div class="footer-grid">
+
+      {# Brand column #}
+      <div>
+        <div class="footer-brand-name">CASH<span>ON</span></div>
+        <p class="footer-desc">
+          India's adaptive multi-category marketplace. One platform for technology, home, fashion, beauty, sports and lifestyle — all curated for you.
+        </p>
+        <div class="footer-socials">
+          <a href="#" class="footer-social-btn" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+          <a href="#" class="footer-social-btn" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+          <a href="#" class="footer-social-btn" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+          <a href="#" class="footer-social-btn" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+        </div>
+
+        {# Mini newsletter in footer #}
+        <div style="margin-top:var(--sp-6)">
+          <p style="font-size:var(--text-xs);font-weight:700;color:var(--c-text-2);margin-bottom:var(--sp-3)">STAY UPDATED</p>
+          <form id="footer-newsletter-form" style="display:flex;gap:var(--sp-2)">
+            <input type="email" placeholder="your@email.com" required
+                   style="flex:1;background:var(--c-surface-2);border:1px solid var(--c-border);border-radius:var(--r-md);padding:.5rem .75rem;color:var(--c-text-1);font-size:var(--text-xs);outline:none"
+                   aria-label="Email for newsletter" />
+            <button type="submit" class="btn btn--primary btn--sm" style="font-size:var(--text-xs)">Go</button>
+          </form>
+        </div>
+      </div>
+
+      {# Categories #}
+      <div>
+        <p class="footer-col-title">Shop</p>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('shop.listing') }}?category=technology">Technology</a></li>
+          <li><a href="{{ url_for('shop.listing') }}?category=furniture-home">Furniture & Home</a></li>
+          <li><a href="{{ url_for('shop.listing') }}?category=fashion">Fashion</a></li>
+          <li><a href="{{ url_for('shop.listing') }}?category=beauty">Beauty</a></li>
+          <li><a href="{{ url_for('shop.listing') }}?category=sports-fitness">Sports & Fitness</a></li>
+          <li><a href="{{ url_for('shop.deals') }}">Today's Deals</a></li>
+        </ul>
+      </div>
+
+      {# Help #}
+      <div>
+        <p class="footer-col-title">Help</p>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('shop.faq') }}">FAQ</a></li>
+          <li><a href="{{ url_for('shop.contact') }}">Contact Us</a></li>
+          <li><a href="#">Shipping Info</a></li>
+          <li><a href="#">Return Policy</a></li>
+          <li><a href="#">Size Guide</a></li>
+          <li><a href="#">Track Order</a></li>
+        </ul>
+      </div>
+
+      {# Account #}
+      <div>
+        <p class="footer-col-title">Account</p>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
+          <li><a href="{{ url_for('auth.register') }}">Create Account</a></li>
+          <li><a href="{{ url_for('auth.order_history') }}">My Orders</a></li>
+          <li><a href="{{ url_for('auth.wishlist') }}">Wishlist</a></li>
+          <li><a href="{{ url_for('auth.profile') }}">Profile Settings</a></li>
+        </ul>
+      </div>
+
+      {# Sell #}
+      <div>
+        <p class="footer-col-title">Sellers</p>
+        <ul class="footer-links">
+          <li><a href="#">Become a Seller</a></li>
+          <li><a href="#">Seller Dashboard</a></li>
+          <li><a href="#">Seller Guidelines</a></li>
+          <li><a href="#">Brand Protection</a></li>
+        </ul>
+      </div>
+    </div>
+
+    {# Trust badges row #}
+    <div style="display:flex;gap:var(--sp-8);flex-wrap:wrap;padding-block:var(--sp-6);border-top:1px solid var(--c-border);border-bottom:1px solid var(--c-border);margin-bottom:var(--sp-6)">
+      {% for icon, label in [
+        ('bi-shield-check','Secure Payments'),
+        ('bi-patch-check','Verified Sellers'),
+        ('bi-arrow-counterclockwise','30-Day Returns'),
+        ('bi-truck','Free Delivery ₹499+'),
+        ('bi-headset','24/7 Support'),
+      ] %}
+      <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:var(--text-xs);color:var(--c-text-3)">
+        <i class="bi {{ icon }}" style="color:var(--c-primary)"></i>{{ label }}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="footer-bottom">
+      <p>© 2024 CASHON Technologies Pvt. Ltd. All rights reserved.</p>
+      <div style="display:flex;gap:var(--sp-5)">
+        <a href="#" style="color:inherit;text-decoration:underline">Privacy Policy</a>
+        <a href="#" style="color:inherit;text-decoration:underline">Terms of Service</a>
+        <a href="#" style="color:inherit;text-decoration:underline">Cookie Policy</a>
+      </div>
+      <p>Made with ♥ in India</p>
+    </div>
+  </div>
+</footer>
+{% endblock %}
+
+{# ══════════════════════════════════════════════════════════
+   Scripts
+══════════════════════════════════════════════════════════ #}
+<script src="{{ url_for('static', filename='js/main.js') }}?v=finalwarm20261119"></script>
+
+{# Inline critical nav + cart scripts #}
+<script>
+(function() {
+  // ── Sticky nav on scroll ──────────────────────────────────────────
+  const header = document.getElementById('site-header');
+  let lastScroll = 0;
+  window.addEventListener('scroll', () => {
+    const s = window.scrollY;
+    if (s > 60) {
+      header.classList.add('site-header--scrolled');
+      header.classList.remove('site-header--transparent');
+    } else {
+      header.classList.remove('site-header--scrolled');
+      header.classList.add('site-header--transparent');
+    }
+    lastScroll = s;
+  }, { passive: true });
+
+  // ── Account dropdown ──────────────────────────────────────────────
+  const accBtn  = document.getElementById('account-btn');
+  const accMenu = document.getElementById('account-dropdown');
+  if (accBtn && accMenu) {
+    accBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = accMenu.classList.toggle('open');
+      accBtn.setAttribute('aria-expanded', open);
+    });
+    document.addEventListener('click', () => {
+      accMenu.classList.remove('open');
+      if (accBtn) accBtn.setAttribute('aria-expanded', 'false');
+    });
+    accMenu.addEventListener('click', e => e.stopPropagation());
+  }
+
+  // ── Mobile nav ────────────────────────────────────────────────────
+  const hamburger    = document.getElementById('hamburger-btn');
+  const mobileNav    = document.getElementById('mobile-nav');
+  const mobileClose  = document.getElementById('mobile-nav-close');
+  const mobileBack   = document.getElementById('mobile-nav-backdrop');
+
+  function openMobileNav() {
+    mobileNav.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    hamburger.setAttribute('aria-expanded', 'true');
+  }
+  function closeMobileNav() {
+    mobileNav.classList.remove('open');
+    document.body.style.overflow = '';
+    hamburger.setAttribute('aria-expanded', 'false');
+  }
+  if (hamburger)   hamburger.addEventListener('click', openMobileNav);
+  if (mobileClose) mobileClose.addEventListener('click', closeMobileNav);
+  if (mobileBack)  mobileBack.addEventListener('click', closeMobileNav);
+
+  // ── Search overlay ────────────────────────────────────────────────
+  const searchOverlay = document.getElementById('search-overlay');
+  const searchInput   = document.getElementById('search-input');
+  const searchOpenBtn = document.getElementById('search-open-btn');
+  const searchResults = document.getElementById('search-results');
+
+  function openSearch() {
+    searchOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => searchInput?.focus(), 50);
+  }
+  function closeSearch() {
+    searchOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  if (searchOpenBtn) searchOpenBtn.addEventListener('click', openSearch);
+  if (searchOverlay) searchOverlay.addEventListener('click', e => {
+    if (e.target === searchOverlay) closeSearch();
+  });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+    if (e.key === 'Escape') {
+      closeSearch();
+      closeMobileNav();
+    }
+  });
+
+  // ── Live search ───────────────────────────────────────────────────
+  let searchTimeout;
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      const q = searchInput.value.trim();
+      if (q.length < 2) {
+        searchResults.innerHTML = '<p class="search-hint"><i class="bi bi-lightning-charge" style="color:var(--c-primary)"></i> Start typing to search...</p>';
+        return;
+      }
+      searchResults.innerHTML = '<p class="search-hint" style="color:var(--c-text-3)">Searching...</p>';
+      searchTimeout = setTimeout(() => {
+        fetch(`/api/search?q=${encodeURIComponent(q)}`)
+          .then(r => r.json())
+          .then(data => {
+            if (!data.products.length) {
+              searchResults.innerHTML = `<p class="search-hint">No results found for "<strong>${q}</strong>"</p>`;
+              return;
+            }
+            searchResults.innerHTML = data.products.map(p => `
+              <a href="/product/${p.slug}" class="search-result-item" onclick="closeSearch()">
+                <img src="${p.image}" alt="${p.name}" class="search-result-img" onerror="this.src='/static/img/products/product-placeholder.png'" />
+                <div>
+                  <div class="search-result-name">${p.name}</div>
+                  <div class="search-result-cat">${p.category}</div>
+                </div>
+                <div class="search-result-price">₹${(p.sale_price || p.price).toLocaleString('en-IN')}</div>
+              </a>
+            `).join('');
+          }).catch(() => {
+            searchResults.innerHTML = '<p class="search-hint" style="color:var(--c-error)">Search unavailable</p>';
+          });
+      }, 280);
+    });
+  }
+
+  // ── Cart drawer ────────────────────────────────────────────────────
+  const cartBackdrop = document.getElementById('cart-backdrop');
+  const cartDrawer   = document.getElementById('cart-drawer');
+  const cartOpenBtn  = document.getElementById('cart-open-btn');
+  const cartCloseBtn = document.getElementById('cart-close-btn');
+
+  window.openCart  = function() {
+    cartBackdrop.classList.add('open');
+    cartDrawer.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    loadCartDrawer();
+  };
+  window.closeCart = function() {
+    cartBackdrop.classList.remove('open');
+    cartDrawer.classList.remove('open');
+    document.body.style.overflow = '';
+  };
+  if (cartOpenBtn)  cartOpenBtn.addEventListener('click', openCart);
+  if (cartCloseBtn) cartCloseBtn.addEventListener('click', closeCart);
+  if (cartBackdrop) cartBackdrop.addEventListener('click', closeCart);
+  document.querySelectorAll('[data-open-cart]').forEach(el =>
+    el.addEventListener('click', openCart));
+  document.querySelectorAll('[data-close-cart]').forEach(el =>
+    el.addEventListener('click', closeCart));
+
+  // ── Load cart drawer contents ─────────────────────────────────────
+  function loadCartDrawer() {
+    const itemsEl  = document.getElementById('cart-drawer-items');
+    const footerEl = document.getElementById('cart-drawer-footer');
+    const totalEl  = document.getElementById('cart-drawer-total');
+    const countEl  = document.getElementById('cart-drawer-count');
+    if (!itemsEl) return;
+
+    fetch('/api/cart/contents')
+      .then(r => r.json())
+      .then(data => {
+        const { items, total, count } = data;
+        // Update badge
+        document.querySelectorAll('.cart-count-badge').forEach(b => {
+          b.textContent = count;
+          b.style.display = count > 0 ? 'flex' : 'none';
+        });
+        if (countEl) countEl.textContent = count;
+
+        if (!items || !items.length) {
+          itemsEl.innerHTML = `
+            <div class="cart-drawer__empty">
+              <div class="cart-empty-icon">🛍️</div>
+              <p style="font-weight:700;color:var(--c-text-2)">Your cart is empty</p>
+              <p style="font-size:var(--text-sm)">Discover products you'll love</p>
+              <a href="/shop" class="btn btn--primary btn--sm" onclick="closeCart()">Start Shopping →</a>
+            </div>`;
+          if (footerEl) footerEl.style.display = 'none';
+          return;
+        }
+
+        itemsEl.innerHTML = items.map(item => `
+          <div class="cart-item" id="cart-item-${item.id}">
+            <img src="${item.image}" alt="${item.name}" class="cart-item__img"
+                 onerror="this.src='/static/img/products/product-placeholder.png'" />
+            <div class="cart-item__info">
+              <div class="cart-item__name">${item.name}</div>
+              ${item.size ? `<div class="cart-item__meta">Size: ${item.size}</div>` : ''}
+              ${item.colour ? `<div class="cart-item__meta">Colour: ${item.colour}</div>` : ''}
+              <div class="cart-item__price">₹${(item.unit_price * item.qty).toLocaleString('en-IN')}</div>
+              <div class="cart-item__qty">
+                <button class="qty-btn" onclick="updateCartQty(${item.id}, ${item.qty - 1})" aria-label="Decrease">−</button>
+                <span class="qty-val">${item.qty}</span>
+                <button class="qty-btn" onclick="updateCartQty(${item.id}, ${item.qty + 1})" aria-label="Increase">+</button>
+              </div>
+            </div>
+            <button class="cart-item__remove" onclick="removeCartItem(${item.id})" aria-label="Remove ${item.name}">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>`).join('');
+
+        if (footerEl) footerEl.style.display = 'flex';
+        if (totalEl)  totalEl.textContent = '₹' + total.toLocaleString('en-IN');
+      }).catch(() => {
+        itemsEl.innerHTML = '<p style="text-align:center;color:var(--c-text-3);padding:var(--sp-6)">Could not load cart.</p>';
+      });
+  }
+
+  window.updateCartQty = function(itemId, qty) {
+    fetch('/api/cart/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, qty })
+    }).then(r => r.json()).then(() => loadCartDrawer());
+  };
+
+  window.removeCartItem = function(itemId) {
+    fetch('/api/cart/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId })
+    }).then(r => r.json()).then(() => loadCartDrawer());
+  };
+
+  // ── Footer newsletter ─────────────────────────────────────────────
+  document.getElementById('footer-newsletter-form')?.addEventListener('submit', e => {
+    e.preventDefault();
+    showToast('success', 'Subscribed!', "You're in. Expect good things.");
+    e.target.reset();
+  });
+})();
+</script>
+
+{# Flash → toast on page load #}
+<script>
+document.querySelectorAll('[data-flash]').forEach(el => {
+  const type = el.dataset.flashType || 'info';
+  const msg  = el.textContent.trim();
+  if (msg) setTimeout(() => showToast(type, msg), 200);
+});
+</script>
+
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

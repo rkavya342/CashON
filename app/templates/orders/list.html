@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}My Orders — CASHON{% endblock %}
+
+{% block content %}
+<div style="padding-top:calc(var(--nav-h) + 36px + var(--sp-8));padding-bottom:var(--sp-20)">
+<div class="container container--narrow">
+
+  <h1 style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:900;color:var(--c-text-1);margin-bottom:var(--sp-8)">
+    My Orders
+  </h1>
+
+  {% if orders %}
+  <div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+    {% for order in orders %}
+    <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:var(--sp-5);transition:border-color var(--dur-fast)"
+         onmouseover="this.style.borderColor='var(--c-primary)'"
+         onmouseout="this.style.borderColor='var(--c-border)'">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--sp-3)">
+        <div>
+          <div style="display:flex;align-items:center;gap:var(--sp-3)">
+            <span style="font-weight:800;color:var(--c-text-1)">#{{ order.order_number }}</span>
+            <span class="status-badge status-{{ order.status }}">{{ order.status|title }}</span>
+            <span class="status-badge status-{{ order.payment_status }}">{{ order.payment_status|title }}</span>
+          </div>
+          <p style="font-size:var(--text-xs);color:var(--c-text-3);margin:var(--sp-2) 0 0">
+            Placed on {{ order.created_at[:10] }} · {{ order.item_count }} item{% if order.item_count != 1 %}s{% endif %}
+          </p>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:800;color:var(--c-text-1)">
+            ₹{{ '{:,.0f}'.format(order.total) }}
+          </div>
+          <div style="font-size:var(--text-xs);color:var(--c-text-3)">{{ order.payment_method|title }}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-4)">
+        <a href="{{ url_for('orders.order_detail', order_id=order.id) }}"
+           class="btn btn--secondary btn--sm">View Details</a>
+        {% if order.status in ('placed','confirmed') %}
+        <button onclick="cancelOrder({{ order.id }}, this)" class="btn btn--ghost btn--sm">Cancel</button>
+        {% endif %}
+        {% if order.payment_status == 'failed' %}
+        <button onclick="retryPayment({{ order.id }}, this)" class="btn btn--primary btn--sm">
+          <i class="bi bi-arrow-clockwise"></i> Retry Payment
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:var(--sp-20);color:var(--c-text-3)">
+    <div style="font-size:4rem;margin-bottom:var(--sp-4)">📦</div>
+    <h2 style="color:var(--c-text-2);margin-bottom:var(--sp-3)">No orders yet</h2>
+    <p style="margin-bottom:var(--sp-6)">Your orders will appear here once you start shopping.</p>
+    <a href="{{ url_for('shop.listing') }}" class="btn btn--primary btn--lg">Start Shopping →</a>
+  </div>
+  {% endif %}
+
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function cancelOrder(orderId, btn) {
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    btn.classList.add('loading');
+    fetch(`/orders/${orderId}/cancel`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) { showToast('success','Order cancelled',''); setTimeout(() => location.reload(), 1200); }
+        else { showToast('error','Cannot cancel',d.message||''); btn.classList.remove('loading'); }
+      });
+  }
+
+  function retryPayment(orderId, btn) {
+    btn.classList.add('loading');
+    fetch(`/orders/${orderId}/retry-payment`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) { showToast('success','Payment successful!',d.message); setTimeout(() => location.reload(), 1500); }
+        else { showToast('error','Payment declined',d.message); btn.classList.remove('loading'); }
+      });
+  }
+</script>
+{% endblock %}
